@@ -49,8 +49,8 @@ public class Client {
             break;
         }
         
-        //String responseLine = is.readLine();
-        //System.out.println("Server returns its square as: " + responseLine);
+        String responseLine = is.readLine();
+        System.out.println(responseLine);
         }
         
         // clean up:
