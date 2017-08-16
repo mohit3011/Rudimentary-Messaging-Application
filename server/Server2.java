@@ -37,8 +37,6 @@ public class Server2 {
         }   
     
     System.out.println( "Server is started and is waiting for connections." );
-    System.out.println( "To close the server type: Close Server" );
-    System.out.println( "To close the client type: Close Client" );
 
 
     // Whenever a connection is received, start a new thread to process the connection
@@ -60,10 +58,11 @@ public class Server2 {
 
 class Server2Connection implements Runnable {
     BufferedReader is;
-    PrintStream os;
+    DataOutputStream os = null;
     Socket clientSocket;
     int id;
     Server2 server;
+
 
     public Server2Connection(Socket clientSocket, int id, Server2 server) {
     this.clientSocket = clientSocket;
@@ -72,7 +71,8 @@ class Server2Connection implements Runnable {
     System.out.println( "Connection " + id + " established with: " + clientSocket );
     try {
         is = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-        os = new PrintStream(clientSocket.getOutputStream());
+        os = new DataOutputStream(clientSocket.getOutputStream());
+
     } catch (IOException e) {
         System.out.println(e);
     }
@@ -85,7 +85,7 @@ class Server2Connection implements Runnable {
 
             while (true) {
                 line = is.readLine();
-        System.out.println( "Received " + line + " from Connection " + id + "." );
+        System.out.println(line);
         
         if (line.equals("Close Server")) 
         {
@@ -100,6 +100,21 @@ class Server2Connection implements Runnable {
             os.close();
             clientSocket.close();
 	    }
+
+        System.out.print( "Enter the message (Close Server to stop server, Close Client to stop client): " );
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        String keyboardInput = br.readLine();
+        os.writeBytes( keyboardInput + "\n" );
+
+        String[] splitted = keyboardInput.split(" ");
+        if (splitted[0].equals("Send") && splitted[1].equals("File")) 
+        {
+     		
+        }
+
+
+
+
 	}
 
         if ( serverStop )
