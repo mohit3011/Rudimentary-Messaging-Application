@@ -1,129 +1,198 @@
 import java.io.*;
 import java.net.*;
 
-public class Server2 {
-    public static void main(String args[]) {
-    int port = 6789;
-    Server2 server = new Server2( port );
-    server.startServer();
+public class Server2 
+{
+    public static void main(String args[]) 
+    {
+	    Server2 server = new Server2(6789);
+	    server.startServer();
     }
 
-    // declare a server socket and a client socket for the server;
-    // declare the number of connections
 
-    ServerSocket echoServer = null;
-    Socket clientSocket = null;
+    ServerSocket echoserver = null;
+    Socket clientsocket = null;
     int numConnections = 0;
-    int port;
-    
-    public Server2( int port ) {
-    this.port = port;
+    int port = 6789;
+ 
+    public Server2(int port) 
+    {
+	    this.port = port;
     }
 
-    public void stopServer() {
-    System.exit(0);
+    public void stopServer()
+    {
+	    System.exit(0);
     }
 
-    public void startServer() {
+    public void startServer()
+    {
     // Try to open a server socket on the given port
     // Note that we can't choose a port less than 1024 if we are not
     // privileged users (root)
     
-        try {
-        echoServer = new ServerSocket(port);
+        try 
+        {
+	        echoserver = new ServerSocket(6789);
         }
-        catch (IOException e) {
-        System.out.println(e);
+        catch (IOException e)
+        {
+	        System.out.println(e);
         }   
     
-    System.out.println( "Server is started and is waiting for connections." );
+    //System.out.println( "Server is started and is waiting for connections." );
 
 
     // Whenever a connection is received, start a new thread to process the connection
     // and wait for the next connection.
     
-    while ( true ) {
-        try {
-        clientSocket = echoServer.accept();
-        numConnections ++;
-        Server2Connection oneconnection = new Server2Connection(clientSocket, numConnections, this);
-        new Thread(oneconnection).start();
-        }   
-        catch (IOException e) {
-        System.out.println(e);
-        }
-    }
+	    while (true) 
+	    {
+	        try 
+	        {
+		        clientsocket = echoserver.accept();
+		        numConnections ++;
+		        Server2Connection oneconnection = new Server2Connection(clientsocket, numConnections, this);
+		        new Thread(oneconnection).start();
+	        }   
+	        catch (IOException e) 
+	        {
+		        System.out.println(e);
+	        }
+	    }
     }
 }
 
-class Server2Connection implements Runnable {
+class Server2Connection implements Runnable 
+{
     BufferedReader is;
     DataOutputStream os = null;
-    Socket clientSocket;
+    Socket clientsocket;
     int id;
     Server2 server;
 
 
-    public Server2Connection(Socket clientSocket, int id, Server2 server) {
-    this.clientSocket = clientSocket;
-    this.id = id;
-    this.server = server;
-    System.out.println( "Connection " + id + " established with: " + clientSocket );
-    try {
-        is = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-        os = new DataOutputStream(clientSocket.getOutputStream());
+    public Server2Connection(Socket clientsocket, int id, Server2 server) 
+    {
+	    this.clientsocket = clientsocket;
+	    this.id = id;
+	    this.server = server;
+	    System.out.println( "Connection " + id + " established with: " + clientsocket );
+	    try 
+	    {
+	        is = new BufferedReader(new InputStreamReader(clientsocket.getInputStream()));
+	        os = new DataOutputStream(clientsocket.getOutputStream());
 
-    } catch (IOException e) {
-        System.out.println(e);
-    }
-    }
-
-    public void run() {
-        String line;
-    try {
-        boolean serverStop = false;
-
-            while (true) {
-                line = is.readLine();
-        System.out.println(line);
-        
-        if (line.equals("Close Server")) 
-        {
-            serverStop = true;
-            break;
-        }
-
-        if (line.equals("Close Client"))
-        {
-        	System.out.println( "Connection " + id + " closed." );
-            is.close();
-            os.close();
-            clientSocket.close();
+	    } 
+	    catch (IOException e) 
+	    {
+	        System.out.println(e);
 	    }
-
-        System.out.print( "Enter the message (Close Server to stop server, Close Client to stop client): " );
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        String keyboardInput = br.readLine();
-        os.writeBytes( keyboardInput + "\n" );
-
-        String[] splitted = keyboardInput.split(" ");
-        if (splitted[0].equals("Send") && splitted[1].equals("File")) 
-        {
-     		
-        }
-
-
-
-
 	}
 
-        if ( serverStop )
-       	{ 
-       		server.stopServer();
-       	}
-    } 
-    catch (IOException e) {
-        System.out.println(e);
-    }
-    }
+    public void run() 
+    {
+     	String line;
+	    try 
+	    {
+        	boolean serverStop = false;
+
+            while (true) 
+            {
+                
+
+				DataInputStream din = new DataInputStream(clientsocket.getInputStream());
+    	        line = din.readUTF();
+            	System.out.print(line);
+            	String[] parse = line.split("\n");
+            	String[] splittedinput = line.split(" ");
+
+    	        if (parse[0].equals("Close Server")) 
+    	        {
+    	        	System.out.println("Mohit");
+    	            serverStop = true;
+    	            break;
+    	        }
+
+    	        if (parse[0].equals("Close Client"))
+    	        {
+    	        	System.out.println( "Connection " + id + " closed." );
+    	            is.close();
+    	            os.close();
+    	            clientsocket.close();
+    		    }
+
+    		    if(splittedinput[0].equals("Send") && splittedinput[1].equals("File"))
+    		    {
+    		        byte[] contents = new byte[10000];
+    		                
+    		        //Initialize the FileOutputStream to the output file's full path.
+    		        FileOutputStream fos = new FileOutputStream(splittedinput[2]);
+    		        BufferedOutputStream bos = new BufferedOutputStream(fos);
+    		        //FileInputStream fis = new FileInputStream(new InputStreamReader(clientSocket.getInputStream()));  
+    		        //No of bytes read in one read() call
+    		        InputStream fis = clientsocket.getInputStream();
+    		        int bytesRead = 0; 
+    		        
+    		        while((bytesRead=fis.read(contents))!=-1)
+    		        {
+    		            //System.out.println(contents);
+    		            bos.write(contents, 0, bytesRead);
+    		            //System.out.println(bos);
+    		            bos.flush();
+    		            break;
+    		        }
+    		        
+    		        bos.close();
+
+    		    }
+
+		        DataOutputStream dos = new DataOutputStream(clientsocket.getOutputStream());
+		        System.out.print( "Enter the message (Close Server to stop server, Close Client to stop client): " );
+		        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		        String keyboardInput = br.readLine();
+		        dos.writeUTF( keyboardInput + "\n" );
+		        String[] splitted = keyboardInput.split(" ");
+
+		        if (splitted[0].equals("Send") && splitted[1].equals("File")) 
+		        {
+		        	File file = new File(splitted[2]);
+		        	FileInputStream fis = new FileInputStream(file);
+		        	BufferedInputStream bis = new BufferedInputStream(fis);
+		        	
+		        	byte[] contents;
+		        	long fileLength = file.length(); 
+			        long current = 0;
+			         
+			        long start = System.nanoTime();
+			        while(current!=fileLength)
+			        { 
+			            int size = 10000;
+			            if(fileLength - current >= size)
+			                current += size;    
+			            else
+			            { 
+			                size = (int)(fileLength - current); 
+			                current = fileLength;
+			            } 
+			            contents = new byte[size]; 
+			            bis.read(contents, 0, size); 
+			            dos.write(contents);
+			            System.out.println("Sending file ... "+(current*100)/fileLength+"%");
+			        }   
+		        
+			        dos.flush(); 
+				}
+			}
+
+	        if ( serverStop )
+	       	{ 
+	       		server.stopServer();
+	       	}
+	    } 
+	    catch (IOException e)
+	    {
+	        System.out.println(e);
+	    }
+  	}
 }
