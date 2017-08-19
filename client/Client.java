@@ -7,26 +7,23 @@ public class Client {
     {       
         try 
         {
-            Socket clientSocket = new Socket("localhost",6789);  
-            DataInputStream is = null;
-            DataOutputStream os = null;
-
-            while (true) 
+            Socket clientsocket=new Socket("localhost",6789);  
+            DataInputStream din=new DataInputStream(clientsocket.getInputStream());  
+            DataOutputStream dout=new DataOutputStream(clientsocket.getOutputStream());  
+            BufferedReader br=new BufferedReader(new InputStreamReader(System.in));  
+      
+            while(true)
             {
-                os = new DataOutputStream(clientSocket.getOutputStream());
                 System.out.print( "Enter the message (Close Server to stop server, Close Client to stop client): " );
-                BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-                String keyboardInput = br.readLine();
-                os.writeUTF( keyboardInput + "\n" );
-                is = new DataInputStream(clientSocket.getInputStream());
+                String keyboardInput = br.readLine();  
+                String[] splittedoutput = keyboardInput.split(" ");
+                dout.writeUTF(keyboardInput);
 
-
+                
                 if (keyboardInput.equals("Close Server") || keyboardInput.equals("Close Client")) 
                 {
                     break;
                 }
-
-                String[] splittedoutput = keyboardInput.split(" ");
 
                 if (splittedoutput[0].equals("Send") && splittedoutput[1].equals("File")) 
                 {
@@ -51,60 +48,72 @@ public class Client {
                         } 
                         contents = new byte[size]; 
                         bis.read(contents, 0, size); 
-                        os.write(contents);
+                        dout.write(contents);
                         System.out.println("Sending file ... "+(current*100)/fileLength+"% complete!");
                         //Thread.sleep(500);
-                    }   
+                    } 
                 
-                    os.flush(); 
+                    dout.flush(); 
                 }
 
-                if (splittedoutput[0].equals("UDP"))
+                else if(splittedoutput[0].equals("UDP"))
                 {
-                    if(splittedoutput[1].equals("Send"))
+                    DatagramSocket sock = new DatagramSocket();
+                                 
+                    InetAddress host = InetAddress.getByName("localhost");
+                     
+                    while(true)
                     {
-
-                    }
-
-                    else
-                    {
-                        DatagramSocket serverSocket = new DatagramSocket(9876);
-                        byte[] receiveData = new byte[1024];
-                        byte[] sendData = new byte[1024];
-                        while(true)
-                           {
-                              DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-                              clientSocket.receive(receivePacket);
-                              String sentence = new String( receivePacket.getData());
-                              System.out.println("RECEIVED via UDP: " + sentence);
-                              InetAddress IPAddress = receivePacket.getAddress();
-                              int port = receivePacket.getPort();
-                              String capitalizedSentence = sentence.toUpperCase();
-                              sendData = capitalizedSentence.getBytes();
-                              DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, port);
-                              clientSocket.send(sendPacket);
-                           }
+                        //take input and send the packet
+                        byte[] b = keyboardInput.getBytes();
+                        System.out.println("Enter1");
+                         
+                        DatagramPacket  dp = new DatagramPacket(b , b.length , host , 7777);
+                        sock.send(dp);
+                         
+                        //now receive reply
+                        //buffer to receive incoming data
+                        byte[] buffer = new byte[65536];
+                        DatagramPacket reply = new DatagramPacket(buffer, buffer.length);
+                        sock.receive(reply);
+                         
+                        byte[] data = reply.getData();
+                        String s = new String(data, 0, reply.getLength());
+                         
+                        //echo the details of incoming data - client ip : client port - client message
+                        //echo(reply.getAddress().getHostAddress() + " : " + reply.getPort() + " - " + s);
                     }
                 }
-            
-                String responseLine = is.readUTF();
-                String[] splitted = responseLine.split(" ");
-                //System.out.println(splitted[2]);
 
-                if(splitted[0].equals("Send") && splitted[1].equals("File"))
-                {
+
+                // Recieving part of the client--------------------------------------------------------------------------- 
+
+
+                String recieveinput=din.readUTF();
+                String[] splittedinput = recieveinput.split(" ");
+
+               // System.out.println("Enter1");
+                if (splittedinput[0].equals("Send") && splittedinput[1].equals("File"))
+                {   
+                 //   System.out.println("Enter2");
+
                     byte[] contents = new byte[10000];
                             
+                  //  System.out.println("Enter3");
+
                     //Initialize the FileOutputStream to the output file's full path.
-                    FileOutputStream fos = new FileOutputStream(splitted[2]);
+                    FileOutputStream fos = new FileOutputStream(splittedinput[2]);
                     BufferedOutputStream bos = new BufferedOutputStream(fos);
                     //FileInputStream fis = new FileInputStream(new InputStreamReader(clientSocket.getInputStream()));  
                     //No of bytes read in one read() call
-                    InputStream fis = clientSocket.getInputStream();
+                    InputStream fis = clientsocket.getInputStream();
                     int bytesRead = 0; 
+                  //  System.out.println("Enter4");
                     
                     while((bytesRead=fis.read(contents))!=-1)
                     {
+                    //    System.out.println("Enter5");
+
                         //System.out.println(contents);
                         bos.write(contents, 0, bytesRead);
                         //System.out.println(bos);
@@ -113,20 +122,44 @@ public class Client {
                     }
                     
                     bos.close();
+                } 
 
+                else if(splittedinput[0].equals("UDP"))
+                {
+                    DatagramSocket sock = null;
+                    sock = new DatagramSocket(7777);
+                     
+                    byte[] buffer = new byte[65536];
+                    DatagramPacket incoming = new DatagramPacket(buffer, buffer.length);
+                     
+                    //echo("Server socket created. Waiting for incoming data...");
+                     
+                    while(true)
+                    {
+                        sock.receive(incoming);
+                        byte[] data = incoming.getData();
+                        String s = new String(data, 0, incoming.getLength());
+                         
+                        //echo the details of incoming data - client ip : client port - client message
+                    //    echo(incoming.getAddress().getHostAddress() + " : " + incoming.getPort() + " - " + s);
+                         
+                        s = "OK : " + s;
+                        DatagramPacket dp = new DatagramPacket(s.getBytes() , s.getBytes().length , incoming.getAddress() , incoming.getPort());
+                        sock.send(dp);
+                    }
                 }
 
                 else
                 {
-                    System.out.print(responseLine);
+                    System.out.println(">> "+recieveinput);  
                 }
 
 
-            }
+            }  
 
-            os.close();
-            is.close();
-            clientSocket.close();   
+            dout.close();
+            din.close();
+            clientsocket.close();   
         } 
         catch (UnknownHostException e)
         {
