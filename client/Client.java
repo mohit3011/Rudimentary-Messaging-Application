@@ -2,7 +2,8 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-public class Client {
+@SuppressWarnings("serial")
+public class Client extends Thread {
     public static void main(String[] args) 
     {       
         try 
@@ -29,35 +30,46 @@ public class Client {
                 {
                     File file = new File(splittedoutput[2]);
                     FileInputStream fis = new FileInputStream(file);
-                    BufferedInputStream bis = new BufferedInputStream(fis);
+                    //BufferedInputStream bis = new BufferedInputStream(fis);
                     
-                    byte[] contents;
+                    //long int readbyte=0;
+                    byte[] contents = new byte[100];
                     long fileLength = file.length(); 
-                    long current = 0;
+                    dout.writeLong(fileLength);
+
+                    int current = 0;
                      
+                    long readbyte = 0;
                     long start = System.nanoTime();
-                    while(current!=fileLength)
+                    while((current=fis.read(contents))>0)
                     { 
-                        int size = 10000;
-                        if(fileLength - current >= size)
-                            current += size;    
+
+                        dout.write(contents,0, current);
+                        if(fileLength-readbyte > 100)
+                        {
+                            readbyte = readbyte + 100;
+                        }
+
                         else
-                        { 
-                            size = (int)(fileLength - current); 
-                            current = fileLength;
-                        } 
-                        contents = new byte[size]; 
-                        bis.read(contents, 0, size); 
-                        dout.write(contents);
-                        System.out.println("Sending file ... "+(current*100)/fileLength+"% complete!");
-                        //Thread.sleep(500);
+                        {
+                            readbyte = fileLength;
+                        }
+                        System.out.print("Sending file ... "+(readbyte*100)/fileLength+"% complete!\r");
+                        try {
+                            Thread.sleep(5);                 //1 milliseconds is one second.
+                        } catch(InterruptedException ex) {
+                            Thread.currentThread().interrupt();
+                        }
                     } 
-                
-                    dout.flush(); 
+                    System.out.print("\n");
+                    System.out.println("File Sent");
+                    fis.close();
+                   // bis.close(); 
                 }
 
                 else if(splittedoutput[0].equals("UDP"))
                 {
+
                     DatagramSocket sock = new DatagramSocket();
                                  
                     InetAddress host = InetAddress.getByName("localhost");
@@ -66,7 +78,7 @@ public class Client {
                     {
                         //take input and send the packet
                         byte[] b = keyboardInput.getBytes();
-                        System.out.println("Enter1");
+                        //System.out.println("Enterhah1");
                          
                         DatagramPacket  dp = new DatagramPacket(b , b.length , host , 7777);
                         sock.send(dp);
@@ -95,33 +107,44 @@ public class Client {
                // System.out.println("Enter1");
                 if (splittedinput[0].equals("Send") && splittedinput[1].equals("File"))
                 {   
-                 //   System.out.println("Enter2");
+                  //   System.out.println("Enter2");
 
-                    byte[] contents = new byte[10000];
+                    byte[] contents = new byte[100];
+                    long fileLength = din.readLong();
                             
-                  //  System.out.println("Enter3");
 
                     //Initialize the FileOutputStream to the output file's full path.
                     FileOutputStream fos = new FileOutputStream(splittedinput[2]);
-                    BufferedOutputStream bos = new BufferedOutputStream(fos);
+                    //BufferedOutputStream bos = new BufferedOutputStream(fos);
                     //FileInputStream fis = new FileInputStream(new InputStreamReader(clientSocket.getInputStream()));  
                     //No of bytes read in one read() call
-                    InputStream fis = clientsocket.getInputStream();
-                    int bytesRead = 0; 
+                    //InputStream fis = clientsocket.getInputStream();
+                    int readbyte = 0; 
                   //  System.out.println("Enter4");
                     
-                    while((bytesRead=fis.read(contents))!=-1)
+                    while(fileLength-readbyte>0)
                     {
+                       // System.out.println("Enter3");
+
                     //    System.out.println("Enter5");
 
                         //System.out.println(contents);
-                        bos.write(contents, 0, bytesRead);
+                        readbyte=din.read(contents);
+                        //System.out.println("readbyte: " + readbyte);
+                        fos.write(contents, 0, readbyte);
+
+                        if(readbyte<100)
+                        {
+                           break;
+                        }
                         //System.out.println(bos);
-                        bos.flush();
-                        break;
+                        //bos.flush();
                     }
+                  //  System.out.println("Enter4");
+
                     
-                    bos.close();
+                    System.out.println("Recieved File");
+                    fos.close();
                 } 
 
                 else if(splittedinput[0].equals("UDP"))
@@ -154,6 +177,8 @@ public class Client {
                     System.out.println(">> "+recieveinput);  
                 }
 
+
+                
 
             }  
 
