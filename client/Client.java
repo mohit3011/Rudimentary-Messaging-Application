@@ -48,79 +48,95 @@ public class Client extends Thread {
                 if (splittedoutput[0].equals("Send") && splittedoutput[1].equals("File")) 
                 {
                     File file = new File(splittedoutput[2]);
-                    FileInputStream fis = new FileInputStream(file);
                     //BufferedInputStream bis = new BufferedInputStream(fis);
-                    
+                    if(!file.exists() && !file.isFile())
+                    {
+                        long fileLength = -1;
+                        dout.writeLong(fileLength);
+                        System.out.println("The file does not exist");
+                    }
                     //long int readbyte=0;
-                    byte[] contents = new byte[100];
-                    long fileLength = file.length(); 
-                    dout.writeLong(fileLength);
+                    else
+                    {
+                        FileInputStream fis = new FileInputStream(file);
+                        byte[] contents = new byte[100];
+                        long fileLength = file.length(); 
+                        dout.writeLong(fileLength);
 
-                    int current = 0;
-                     
-                    long readbyte = 0;
-                    long bar;
-                    long start = System.nanoTime();
-                    while((current=fis.read(contents))>0)
-                    { 
+                        int current = 0;
+                         
+                        long readbyte = 0;
+                        long bar;
+                        long start = System.nanoTime();
+                        while((current=fis.read(contents))>0)
+                        { 
 
-                        dout.write(contents,0, current);
-                        if(fileLength-readbyte > 100)
-                        {
-                            readbyte = readbyte + 100;
-                        }
+                            dout.write(contents,0, current);
+                            if(fileLength-readbyte > 100)
+                            {
+                                readbyte = readbyte + 100;
+                            }
 
-                        else
-                        {
-                            readbyte = fileLength;
-                        }
+                            else
+                            {
+                                readbyte = fileLength;
+                            }
 
-                        bar = ((readbyte*100)/fileLength)/10;
-                        System.out.print("Sending "+ splittedoutput[2] + " " + bargenerate(bar) + " " + (readbyte*100)/fileLength+"% complete!\r");
-                        try {
-                            Thread.sleep(5);                 //1 milliseconds is one second.
-                        } catch(InterruptedException ex) {
-                            Thread.currentThread().interrupt();
-                        }
+                            bar = ((readbyte*100)/fileLength)/10;
+                            System.out.print("Sending "+ splittedoutput[2] + " " + bargenerate(bar) + " " + (readbyte*100)/fileLength+"% complete!\r");
+                            try {
+                                Thread.sleep(5);                 //1 milliseconds is one second.
+                            } catch(InterruptedException ex) {
+                                Thread.currentThread().interrupt();
+                            }
+                        } 
+                        System.out.print("\n");
+                        System.out.println("File Sent");
+                        fis.close();
                     } 
-                    System.out.print("\n");
-                    System.out.println("File Sent");
-                    fis.close();
-                   // bis.close(); 
                 }
 
                 else if(splittedoutput[0].equals("UDP"))
                 {
                     File file = new File(splittedoutput[3]);
-                    FileInputStream fis = new FileInputStream(file);                    
-                    byte[] contents = new byte[100];
-                    long fileLength = file.length();
-                    dout.writeLong(fileLength); 
-                    int current = 0;
-                    long readbyte = 0;
-                    long bar;
-                    InetAddress host = InetAddress.getByName("localhost");
+                    if(!file.exists() && !file.isFile())
+                    {
+                        long fileLength = -1;
+                        dout.writeLong(fileLength);
+                        System.out.println("The file does not exist");
+                    }
+                    else
+                    {
+                        FileInputStream fis = new FileInputStream(file);                    
+                        byte[] contents = new byte[100];
+                        long fileLength = file.length();
+                        dout.writeLong(fileLength); 
+                        int current = 0;
+                        long readbyte = 0;
+                        long bar;
+                        InetAddress host = InetAddress.getByName("localhost");
 
-                    while((current=fis.read(contents))>0)
-                    { 
+                        while((current=fis.read(contents))>0)
+                        { 
 
-                        DatagramPacket dp = new DatagramPacket(contents, contents.length, host, 7010);
-                        udpsocksend.send(dp);
-                        readbyte = readbyte + current;
-                        //System.out.println("readbyte : " + readbyte);
-                        
-                        bar = ((readbyte*100)/fileLength)/10;
-                        System.out.print("Sending "+ splittedoutput[2] + " " + bargenerate(bar) + " " + (readbyte*100)/fileLength+"% complete!\r");
+                            DatagramPacket dp = new DatagramPacket(contents, contents.length, host, 7010);
+                            udpsocksend.send(dp);
+                            readbyte = readbyte + current;
+                            //System.out.println("readbyte : " + readbyte);
+                            
+                            bar = ((readbyte*100)/fileLength)/10;
+                            System.out.print("Sending "+ splittedoutput[2] + " " + bargenerate(bar) + " " + (readbyte*100)/fileLength+"% complete!\r");
 
-                        try {
-                            Thread.sleep(5);                 //1 milliseconds is one second.
-                        } catch(InterruptedException ex) {
-                            Thread.currentThread().interrupt();
-                        }
-                    } 
-                    System.out.print("\n");
-                    System.out.println("File Sent");
-                    fis.close();
+                            try {
+                                Thread.sleep(5);                 //1 milliseconds is one second.
+                            } catch(InterruptedException ex) {
+                                Thread.currentThread().interrupt();
+                            }
+                        } 
+                        System.out.print("\n");
+                        System.out.println("File Sent");
+                        fis.close();
+                    }
                 }
 
 
@@ -138,72 +154,77 @@ public class Client extends Thread {
                     long fileLength = din.readLong();
                             
 
-                    FileOutputStream fos = new FileOutputStream(splittedinput[2]);
-                    
-                    int readbyte = 0;
-                    long current = 0; 
-                    long bar;
-                    
-                    while(fileLength-current>0)
+                    if(fileLength!=-1)
                     {
-
-                        readbyte=din.read(contents);
-                        fos.write(contents, 0, readbyte);
-
-                        if(readbyte<100)
+                        FileOutputStream fos = new FileOutputStream(splittedinput[2]);
+                        int readbyte = 0;
+                        long current = 0;
+                        long bar; 
+                        
+                        while(fileLength-current>0)
                         {
-                           current = fileLength; 
+                            readbyte=din.read(contents);
+                            fos.write(contents, 0, readbyte);
+
+                           if(readbyte<100)
+                           {
+                              current = fileLength; 
+                           }
+
+                           else
+                           {
+                               current = current + 100;
+                           }
+
+                           bar = ((current*100)/fileLength)/10;
+                           System.out.print("Recieving "+ splittedinput[2] + " " + bargenerate(bar) + " " + (current*100)/fileLength+"% complete!\r");
+
                         }
 
-                        else
-                        {
-                            current = current + 100;
-                        }
-
-                        bar = ((current*100)/fileLength)/10;
-                        System.out.print("Recieving "+ splittedinput[2] + " " + bargenerate(bar) + " " + (current*100)/fileLength+"% complete!\r");
-
+                        System.out.print("\n");
+                        System.out.println("Recieved File");
+                        fos.close();
                     }
-
-                    System.out.print("\n");
-                    System.out.println("Recieved File");
-                    fos.close();
                 } 
 
                 else if(splittedinput[0].equals("UDP"))
                 {
                     byte[] contents = new byte[100];
                     long fileLength = din.readLong();
-                    //System.out.println("fileLength: " + fileLength);
-                    FileOutputStream fos = new FileOutputStream(splittedinput[3]);
-                    int readbyte = 0;
-                    int current = 0;
-                    int bar;
-                    DatagramPacket dp = new DatagramPacket(contents, contents.length);
 
-                    while(current<fileLength)
+                    if(fileLength!=-1)
                     {
-                        udpsockrecieve.receive(dp);
-                        contents=dp.getData();
-                        readbyte=dp.getLength();
+                    //System.out.println("fileLength: " + fileLength);
+                        FileOutputStream fos = new FileOutputStream(splittedinput[3]);
+                        int readbyte = 0;
+                        int current = 0;
+                        int bar;
+                        DatagramPacket dp = new DatagramPacket(contents, contents.length);
 
-                        current = current + readbyte;
-
-                        bar = ((current*100)/(int)fileLength)/10;
-                        System.out.print("Recieving "+ splittedinput[3] + " " + bargenerate(bar) + " " + (current*100)/fileLength+"% complete!\r");
-
-
-                        if(readbyte<=0)
+                        while(current<fileLength)
                         {
-                            break;
-                        }
-                        fos.write(contents, 0, readbyte);
-                        
-                    }
+                            udpsockrecieve.receive(dp);
+                            contents=dp.getData();
+                            readbyte=dp.getLength();
 
-                    System.out.print("\n");
-                    System.out.println("Recieved File");
-                    fos.close();
+                            current = current + readbyte;
+
+                            bar = ((current*100)/(int)fileLength)/10;
+                            System.out.print("Recieving "+ splittedinput[3] + " " + bargenerate(bar) + " " + (current*100)/fileLength+"% complete!\r");
+
+
+                            if(readbyte<=0)
+                            {
+                                break;
+                            }
+                            fos.write(contents, 0, readbyte);
+                            
+                        }
+
+                        System.out.print("\n");
+                        System.out.println("Recieved File");
+                        fos.close();
+                    }
 
                 }
 
