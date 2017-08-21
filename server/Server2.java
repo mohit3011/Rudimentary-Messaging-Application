@@ -28,9 +28,6 @@ public class Server2 extends Thread
 
     public void startServer()
     {
-    // Try to open a server socket on the given port
-    // Note that we can't choose a port less than 1024 if we are not
-    // privileged users (root)
     
         try 
         {
@@ -41,11 +38,6 @@ public class Server2 extends Thread
 	        System.out.println(e);
         }   
     
-    //System.out.println( "Server is started and is waiting for connections." );
-
-
-    // Whenever a connection is received, start a new thread to process the connection
-    // and wait for the next connection.
     
 	    while (true) 
 	    {
@@ -73,6 +65,8 @@ class Server2Connection implements Runnable
     DataInputStream din;
     DataOutputStream dout;
     BufferedReader br;
+    DatagramSocket udpsocksend;
+    DatagramSocket udpsockrecieve;
 
 
     public Server2Connection(Socket clientsocket, int id, Server2 server) 
@@ -87,6 +81,8 @@ class Server2Connection implements Runnable
             din=new DataInputStream(clientsocket.getInputStream());  
             dout=new DataOutputStream(clientsocket.getOutputStream());  
             br=new BufferedReader(new InputStreamReader(System.in));
+            udpsockrecieve = new DatagramSocket(7010);
+            udpsocksend = new DatagramSocket();
 
 	    } 
 	    catch (IOException e) 
@@ -94,6 +90,24 @@ class Server2Connection implements Runnable
 	        System.out.println(e);
 	    }
 	}
+
+    public String bargenerate(long bar)
+        {
+            long i, j;
+            String result = "[";
+            for(i=0;i<bar;i++)
+            {
+                result = result+"=";
+            }
+            result = result+=">";
+            for(j=bar;j<10;j++)
+            {
+                result = result+" ";
+            }
+
+            result = result + "]";
+            return result;
+        }
 
     public void run() 
     {
@@ -115,79 +129,87 @@ class Server2Connection implements Runnable
 
                 if (splittedinput[0].equals("Send") && splittedinput[1].equals("File"))
                 {
-                    //   System.out.println("Enter2");
 
                     byte[] contents = new byte[100];
                     long fileLength = din.readLong();
                             
 
-                    //Initialize the FileOutputStream to the output file's full path.
                     FileOutputStream fos = new FileOutputStream(splittedinput[2]);
-                    //BufferedOutputStream bos = new BufferedOutputStream(fos);
-                    //FileInputStream fis = new FileInputStream(new InputStreamReader(clientSocket.getInputStream()));  
-                    //No of bytes read in one read() call
-                    //InputStream fis = clientsocket.getInputStream();
-                    int readbyte = 0; 
-                  //  System.out.println("Enter4");
+                    int readbyte = 0;
+                    long current = 0;
+                    long bar; 
                     
-                    while(fileLength-readbyte>0)
+                    while(fileLength-current>0)
                     {
-                       // System.out.println("Enter3");
-
-                    //    System.out.println("Enter5");
-
-                        //System.out.println(contents);
                         readbyte=din.read(contents);
-                        //System.out.println("readbyte: " + readbyte);
                         fos.write(contents, 0, readbyte);
 
-                        if(readbyte<100)
-                        {
-                           break;
-                        }
-                        //System.out.println(bos);
-                        //bos.flush();
-                    }
-                  //  System.out.println("Enter4");
+                       if(readbyte<100)
+                       {
+                          current = fileLength; 
+                       }
 
-                    
+                       else
+                       {
+                           current = current + 100;
+                       }
+
+                       bar = ((current*100)/fileLength)/10;
+                       System.out.print("Recieving "+ splittedinput[2] + " " + bargenerate(bar) + " " + (current*100)/fileLength+"% complete!\r");
+
+                    }
+
+                    System.out.print("\n");
                     System.out.println("Recieved File");
                     fos.close();
                 } 
 
                 else if(splittedinput[0].equals("UDP"))
                 {
-                    DatagramSocket sock = null;
-                    sock = new DatagramSocket(7777);
-                     
-                    byte[] buffer = new byte[65536];
-                    DatagramPacket incoming = new DatagramPacket(buffer, buffer.length);
-                     
-                    //echo("Server socket created. Waiting for incoming data...");
-                     
-                    while(true)
+                    byte[] contents = new byte[100];
+                    long fileLength = din.readLong();
+                   // System.out.println("fileLength: " + fileLength);
+                    FileOutputStream fos = new FileOutputStream(splittedinput[3]);
+                    int readbyte = 0;
+                    int current = 0;
+                    int bar;
+                    DatagramPacket dp = new DatagramPacket(contents, contents.length);
+
+                    while(current<fileLength)
                     {
-                        sock.receive(incoming);
-                        byte[] data = incoming.getData();
-                        String s = new String(data, 0, incoming.getLength());
-                         
-                        //echo the details of incoming data - client ip : client port - client message
-                    //    echo(incoming.getAddress().getHostAddress() + " : " + incoming.getPort() + " - " + s);
-                         
-                        s = "OK : " + s;
-                        DatagramPacket dp = new DatagramPacket(s.getBytes() , s.getBytes().length , incoming.getAddress() , incoming.getPort());
-                        sock.send(dp);
+                      //  System.out.println ("Enter1");
+
+                        udpsockrecieve.receive(dp);
+                        contents=dp.getData();
+                        readbyte=dp.getLength();
+                       // System.out.println("readbyte : " + readbyte);
+
+                        current = current + readbyte;
+
+                        bar = ((current*100)/(int)fileLength)/10;
+                        System.out.print("Recieving "+ splittedinput[3] + " " + bargenerate(bar) + " " + (current*100)/fileLength+"% complete!\r");
+
+
+                        if(readbyte<=0)
+                        {
+                            break;
+                        }
+                        fos.write(contents, 0, readbyte);
+                        
                     }
+
+                    System.out.println("Recieved File");
+                    fos.close();
                 }
 
                 else
                 {
-                    System.out.println(">> "+recieveinput);  
+                    System.out.println("Alice: "+recieveinput);  
                 } 
 
                 //sending part -----------------------------------------------------------------------------------------------
 
-                System.out.print( "Enter the message (Close Server to stop server, Close Client to stop client): " );
+                System.out.print( ">> " );
                 String keyboardInput = br.readLine();  
                 String[] splittedoutput = keyboardInput.split(" "); 
                 dout.writeUTF( keyboardInput);
@@ -202,9 +224,12 @@ class Server2Connection implements Runnable
                     //long int readbyte=0;
                     byte[] contents = new byte[100];
                     long fileLength = file.length(); 
+                    dout.writeLong(fileLength);
+
                     int current = 0;
                      
                     long readbyte = 0;
+                    long bar;
                     long start = System.nanoTime();
                     while((current=fis.read(contents))>0)
                     { 
@@ -219,7 +244,9 @@ class Server2Connection implements Runnable
                         {
                             readbyte = fileLength;
                         }
-                        System.out.print("Sending file ... "+(readbyte*100)/fileLength+"% complete!\r");
+
+                        bar = ((readbyte*100)/fileLength)/10;
+                        System.out.print("Sending "+ splittedoutput[2] + " " + bargenerate(bar) + " " + (readbyte*100)/fileLength+"% complete!\r");
                         try {
                             Thread.sleep(5);                 //1 milliseconds is one second.
                         } catch(InterruptedException ex) {
@@ -229,38 +256,41 @@ class Server2Connection implements Runnable
                     System.out.print("\n");
                     System.out.println("File Sent");
                     fis.close();
-                   // bis.close(); 
+                   // bis.close();  
                 }
 
                 else if(splittedoutput[0].equals("UDP"))
                 {
-                    DatagramSocket sock = new DatagramSocket();
-                                 
+                    
+                    File file = new File(splittedoutput[3]);
+                    FileInputStream fis = new FileInputStream(file);                    
+                    byte[] contents = new byte[100];
+                    long fileLength = file.length();
+                    dout.writeLong(fileLength); 
+                    int current = 0;
+                    long readbyte = 0;
+                    long bar;
                     InetAddress host = InetAddress.getByName("localhost");
-                     
-                    while(true)
-                    {
-                        //take input and send the packet
-                        byte[] b = keyboardInput.getBytes();
-                        //System.out.println("Entermoh1");
-                         
-                        DatagramPacket  dp = new DatagramPacket(b , b.length , host , 7777);
-                        sock.send(dp);
-                         
-                        //now receive reply
-                        //buffer to receive incoming data
-                        byte[] buffer = new byte[65536];
-                        DatagramPacket reply = new DatagramPacket(buffer, buffer.length);
-                        sock.receive(reply);
-                         
-                        byte[] data = reply.getData();
-                        String s = new String(data, 0, reply.getLength());
-                         
-                        //echo the details of incoming data - client ip : client port - client message
-                        //echo(reply.getAddress().getHostAddress() + " : " + reply.getPort() + " - " + s);
-                    }
 
-                    //dout.flush();
+                    while((current=fis.read(contents))>0)
+                    { 
+
+                        DatagramPacket dp = new DatagramPacket(contents, contents.length, host, 7011);
+                        udpsocksend.send(dp);
+                        readbyte = readbyte + current;
+
+                        bar = ((readbyte*100)/fileLength)/10;
+                        System.out.print("Sending "+ splittedoutput[2] + " " + bargenerate(bar) + " " + (readbyte*100)/fileLength+"% complete!\r");
+
+                        try {
+                            Thread.sleep(5);                 //1 milliseconds is one second.
+                        } catch(InterruptedException ex) {
+                            Thread.currentThread().interrupt();
+                        }
+                    } 
+                    System.out.print("\n");
+                    System.out.println("File Sent");
+                    fis.close();
                 }
 			}
 
